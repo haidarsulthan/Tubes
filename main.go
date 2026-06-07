@@ -1,5 +1,8 @@
 package main
-import "fmt"
+
+import (
+	"fmt"
+)
 
 type Lapangan struct {
 	id    int
@@ -53,6 +56,10 @@ func inputFloat(prompt string) float64 {
 	return f
 }
 
+func garis() {
+	fmt.Println("--------------------------------------------------")
+}
+
 func cariNamaLapangan(id int) string {
 	for _, l := range lapangans {
 		if l.id == id {
@@ -101,7 +108,7 @@ func ubahLapangan() {
 		if l.id == id {
 			fmt.Printf("Data lama: %s | %s | Rp%.0f\n", l.nama, l.tipe, l.harga)
 			nama := inputString("Nama baru : ")
-			tipe := inputString("Tipe baru(Indoor/Outdoor) : ")
+			tipe := inputString("Tipe baru : ")
 			harga := inputFloat("Harga baru : ")
 
 			lapangans[i].nama = nama
@@ -128,7 +135,7 @@ func hapusLapangan() {
 	fmt.Println("ID tidak ditemukan.")
 }
 
-func dataPenyewa() {
+func lihatPenyewa() {
 	fmt.Println("\n=== DATA PENYEWA ===")
 	if len(penyewas) == 0 {
 		fmt.Println("Belum ada data penyewa.")
@@ -150,7 +157,7 @@ func tambahPenyewa() {
 }
 
 func ubahPenyewa() {
-	dataPenyewa()
+	lihatPenyewa()
 	id := inputAngka("\nMasukkan ID penyewa yang mau diubah: ")
 
 	for i, p := range penyewas {
@@ -169,7 +176,7 @@ func ubahPenyewa() {
 }
 
 func hapusPenyewa() {
-	dataPenyewa()
+	lihatPenyewa()
 	id := inputAngka("\nMasukkan ID penyewa yang mau dihapus: ")
 
 	for i, p := range penyewas {
@@ -183,7 +190,7 @@ func hapusPenyewa() {
 }
 
 func tambahJadwal() {
-	fmt.Println("\n=== TAMBAH SEWA LAPANGAN ===")
+	fmt.Println("\n=== CATAT SEWA LAPANGAN ===")
 
 	if len(lapangans) == 0 || len(penyewas) == 0 {
 		fmt.Println("Pastikan data lapangan dan penyewa sudah ada dulu.")
@@ -203,6 +210,47 @@ func tambahJadwal() {
 		return
 	}
 
+	lihatPenyewa()
+	pID := inputAngka("\nPilih ID penyewa: ")
+	var penyewa *Penyewa
+	for i := range penyewas {
+		if penyewas[i].id == pID {
+			penyewa = &penyewas[i]
+		}
+	}
+	if penyewa == nil {
+		fmt.Println("Penyewa tidak ditemukan.")
+		return
+	}
+
+	tanggal := inputString("Tanggal (contoh: 2025-06-10): ")
+	jamMulai := inputAngka("Jam mulai (0-23): ")
+	jamSelesai := inputAngka("Jam selesai (0-23): ")
+
+	if jamSelesai <= jamMulai {
+		fmt.Println("Jam selesai harus lebih besar dari jam mulai!")
+		return
+	}
+
+	for _, j := range jadwals {
+		if j.lapanganID == lapID && j.tanggal == tanggal {
+			if jamMulai < j.jamSelesai && jamSelesai > j.jamMulai {
+				fmt.Printf("Jadwal bentrok dengan sewa jam %d:00-%d:00!\n", j.jamMulai, j.jamSelesai)
+				return
+			}
+		}
+	}
+
+	durasi := jamSelesai - jamMulai
+	total := float64(durasi) * lap.harga
+
+	jadwals = append(jadwals, Jadwal{idJadwal, lapID, pID, tanggal, jamMulai, jamSelesai, total})
+	fmt.Println("\nSewa berhasil dicatat!")
+	fmt.Printf("Lapangan : %s\n", lap.nama)
+	fmt.Printf("Penyewa  : %s\n", penyewa.nama)
+	fmt.Printf("Tanggal  : %s, jam %d:00 - %d:00\n", tanggal, jamMulai, jamSelesai)
+	fmt.Printf("Total    : Rp%.0f\n", total)
+	idJadwal++
 }
 
 func lihatJadwal() {
@@ -218,44 +266,273 @@ func lihatJadwal() {
 	}
 }
 
-func main() {
+func sequentialSearch(keyword string) {
+	fmt.Println("\n[Sequential Search]")
+	ketemu := false
 
+	for _, p := range penyewas {
+		if p.nama == keyword || p.telp == keyword {
+			fmt.Printf("Ketemu! ID: %d | %s | %s\n", p.id, p.nama, p.telp)
+			ketemu = true
+		}
+	}
+	if !ketemu {
+		fmt.Println("Data tidak ditemukan.")
+	}
+}
+
+func binarySearch(keyword string) {
+	fmt.Println("\n[Binary Search]")
+
+	sorted := make([]Penyewa, len(penyewas))
+	copy(sorted, penyewas)
+	for i := 0; i < len(sorted)-1; i++ {
+		for j := 0; j < len(sorted)-1-i; j++ {
+			if sorted[j].nama > sorted[j+1].nama {
+				sorted[j], sorted[j+1] = sorted[j+1], sorted[j]
+			}
+		}
+	}
+
+	kiri := 0
+	kanan := len(sorted) - 1
+
+	for kiri <= kanan {
+		tengah := (kiri + kanan) / 2
+		if sorted[tengah].nama == keyword {
+			p := sorted[tengah]
+			fmt.Printf("Ketemu! ID: %d | %s | %s\n", p.id, p.nama, p.telp)
+			return
+		} else if sorted[tengah].nama < keyword {
+			kiri = tengah + 1
+		} else {
+			kanan = tengah - 1
+		}
+	}
+	fmt.Println("Data tidak ditemukan.")
+}
+
+func menuCari() {
+	fmt.Println("\n=== CARI PENYEWA ===")
+	fmt.Println("1. Sequential Search")
+	fmt.Println("2. Binary Search")
+	pilihan := inputAngka("Pilih: ")
+	keyword := inputString("Masukkan keyword: ")
+
+	if pilihan == 1 {
+		sequentialSearch(keyword)
+	} else if pilihan == 2 {
+		binarySearch(keyword)
+	} else {
+		fmt.Println("Pilihan tidak valid.")
+	}
+}
+
+func selectionSortJam() {
+	fmt.Println("\n[Selection Sort - urut berdasarkan jam mulai]")
+
+	data := make([]Jadwal, len(jadwals))
+	copy(data, jadwals)
+
+	for i := 0; i < len(data)-1; i++ {
+		minIdx := i
+		for j := i + 1; j < len(data); j++ {
+			if data[j].jamMulai < data[minIdx].jamMulai {
+				minIdx = j
+			}
+		}
+		data[i], data[minIdx] = data[minIdx], data[i]
+	}
+
+	for _, j := range data {
+		fmt.Printf("ID:%d | %s | jam %d:00-%d:00 | Rp%.0f\n",
+			j.id, cariNamaLapangan(j.lapanganID), j.jamMulai, j.jamSelesai, j.harga)
+	}
+}
+
+func insertionSortHarga() {
+	fmt.Println("\n[Insertion Sort - urut berdasarkan harga]")
+
+	data := make([]Jadwal, len(jadwals))
+	copy(data, jadwals)
+
+	for i := 1; i < len(data); i++ {
+		temp := data[i]
+		j := i - 1
+		for j >= 0 && data[j].harga > temp.harga {
+			data[j+1] = data[j]
+			j--
+		}
+		data[j+1] = temp
+	}
+
+	for _, j := range data {
+		fmt.Printf("ID:%d | %s | jam %d:00-%d:00 | Rp%.0f\n",
+			j.id, cariNamaLapangan(j.lapanganID), j.jamMulai, j.jamSelesai, j.harga)
+	}
+}
+
+func menuSort() {
+	fmt.Println("\n=== URUTKAN JADWAL ===")
+	fmt.Println("1. Selection Sort (berdasarkan jam mulai)")
+	fmt.Println("2. Insertion Sort (berdasarkan harga)")
+	pilihan := inputAngka("Pilih: ")
+
+	if len(jadwals) == 0 {
+		fmt.Println("Belum ada jadwal.")
+		return
+	}
+
+	if pilihan == 1 {
+		selectionSortJam()
+	} else if pilihan == 2 {
+		insertionSortHarga()
+	} else {
+		fmt.Println("Pilihan tidak valid.")
+	}
+}
+
+func tampilkanStatistik() {
+	fmt.Println()
+	fmt.Println("+++ FUTSAL-BOOK +++")
+	fmt.Println("=== STATISTIK ===")
+
+	if len(jadwals) == 0 {
+		fmt.Println("Belum ada data transaksi.")
+		return
+	}
+
+	var bulanList []string
+	var totalList []float64
+
+	for _, j := range jadwals {
+		bulan := j.tanggal[:7]
+
+		sudahAda := false
+		for i, b := range bulanList {
+			if b == bulan {
+				totalList[i] += j.harga
+				sudahAda = true
+				break
+			}
+		}
+		if !sudahAda {
+			bulanList = append(bulanList, bulan)
+			totalList = append(totalList, j.harga)
+		}
+	}
+
+	fmt.Println("\n-- Pendapatan per Bulan --")
+	totalSemua := 0.0
+	for i, b := range bulanList {
+		fmt.Printf("%s : Rp%.0f\n", b, totalList[i])
+		totalSemua += totalList[i]
+	}
+	fmt.Printf("Total keseluruhan : Rp%.0f\n", totalSemua)
+
+	var frekuensiJam [24]int
+	for _, j := range jadwals {
+		for jam := j.jamMulai; jam < j.jamSelesai; jam++ {
+			frekuensiJam[jam]++
+		}
+	}
+
+	jamTerpopuler := 0
+	for i := 1; i < 24; i++ {
+		if frekuensiJam[i] > frekuensiJam[jamTerpopuler] {
+			jamTerpopuler = i
+		}
+	}
+
+	fmt.Println("\n-- Jam Paling Sering Dipesan --")
+	fmt.Printf("Jam %d:00 - %d:00 dipesan sebanyak %d kali\n",
+		jamTerpopuler, jamTerpopuler+1, frekuensiJam[jamTerpopuler])
+
+	fmt.Println("\nDetail per jam:")
+	for i := 6; i < 22; i++ {
+		if frekuensiJam[i] > 0 {
+			fmt.Printf("Jam %02d:00 - dipesan %d kali\n", i, frekuensiJam[i])
+		}
+	}
+}
+
+func isiDataContoh() {
+	lapangans = []Lapangan{
+		{1, "LapanganA", "indoor", 100000},
+		{2, "LapanganB", "outdoor", 75000},
+	}
+	idLapangan = 3
+
+	penyewas = []Penyewa{
+		{1, "Andi", "081111111111"},
+		{2, "Budi", "082222222222"},
+		{3, "Citra", "083333333333"},
+	}
+	idPenyewa = 4
+
+	jadwals = []Jadwal{
+		{1, 1, 1, "2025-06-01", 8, 10, 200000},
+		{2, 1, 2, "2025-06-01", 14, 16, 200000},
+		{3, 2, 3, "2025-06-02", 9, 11, 150000},
+		{4, 1, 1, "2025-06-05", 8, 10, 200000},
+	}
+	idJadwal = 5
+}
+
+func main() {
+	isiDataContoh()
+
+	fmt.Println("+++ FUTSAL-BOOK +++")
 	fmt.Println("Aplikasi Pemesanan Lapangan Futsal")
-	fmt.Println("--------------------------------------------------")
+	garis()
 
 	for {
 		fmt.Println("\n=== MENU UTAMA ===")
-		fmt.Println("--------------------------------------------------")
-		fmt.Println("1.  Tambah lapangan")
-		fmt.Println("2.  Ubah lapangan")
-		fmt.Println("3.  Hapus lapangan")
-		fmt.Println("4.  Tambah penyewa")
-		fmt.Println("5.  Ubah penyewa")
-		fmt.Println("6.  Hapus penyewa")
-		fmt.Println("7.  Tambah sewa")
-		fmt.Println("8.  Lihat jadwal sewa")
+		fmt.Println("1.  Lihat lapangan")
+		fmt.Println("2.  Tambah lapangan")
+		fmt.Println("3.  Ubah lapangan")
+		fmt.Println("4.  Hapus lapangan")
+		fmt.Println("5.  Lihat penyewa")
+		fmt.Println("6.  Tambah penyewa")
+		fmt.Println("7.  Ubah penyewa")
+		fmt.Println("8.  Hapus penyewa")
+		fmt.Println("9.  Catat sewa")
+		fmt.Println("10. Lihat jadwal sewa")
+		fmt.Println("11. Cari penyewa")
+		fmt.Println("12. Urutkan jadwal")
+		fmt.Println("13. Statistik")
 		fmt.Println("0.  Keluar")
-		fmt.Println("--------------------------------------------------")
+		garis()
 
 		pilihan := inputAngka("Pilih menu: ")
 
 		switch pilihan {
 		case 1:
-			tambahLapangan()
+			lihatLapangan()
 		case 2:
-			ubahLapangan()
+			tambahLapangan()
 		case 3:
-			hapusLapangan()
+			ubahLapangan()
 		case 4:
-			tambahPenyewa()
+			hapusLapangan()
 		case 5:
-			ubahPenyewa()
+			lihatPenyewa()
 		case 6:
-			hapusPenyewa()
+			tambahPenyewa()
 		case 7:
-			tambahJadwal()
+			ubahPenyewa()
 		case 8:
+			hapusPenyewa()
+		case 9:
+			tambahJadwal()
+		case 10:
 			lihatJadwal()
+		case 11:
+			menuCari()
+		case 12:
+			menuSort()
+		case 13:
+			tampilkanStatistik()
 		case 0:
 			fmt.Println("Terima kasih!")
 			return
